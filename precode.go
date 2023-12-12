@@ -42,10 +42,10 @@ var tasks = map[string]Task{
 }
 
 const (
-	contentTypeHeader     string = "Content-Type"
-	jsonMIME              string = "application/json"
-	tasksEndpointPattern  string = "/tasks"
-	taskIdEndpointPattern string = "/task/{id}"
+	contentTypeHeader      string = "Content-Type"
+	jsonMIME               string = "application/json"
+	tasksEndpointPattern   string = "/tasks"
+	tasksIdEndpointPattern string = "/tasks/{id}"
 )
 
 func getTasksHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +83,7 @@ func postTasksHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func getTaskIdHandler(w http.ResponseWriter, r *http.Request) {
+func getTasksIdHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	task, ok := tasks[id]
@@ -100,10 +100,12 @@ func getTaskIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(contentTypeHeader, jsonMIME)
 	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	if _, err := w.Write(resp); err != nil {
+		fmt.Println(err)
+	}
 }
 
-func deleteTaskIdHandler(w http.ResponseWriter, r *http.Request) {
+func deleteTasksIdHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if _, ok := tasks[id]; !ok {
@@ -121,8 +123,8 @@ func main() {
 
 	r.Get(tasksEndpointPattern, getTasksHandler)
 	r.Post(tasksEndpointPattern, postTasksHandler)
-	r.Get(taskIdEndpointPattern, getTaskIdHandler)
-	r.Delete(taskIdEndpointPattern, deleteTaskIdHandler)
+	r.Get(tasksIdEndpointPattern, getTasksIdHandler)
+	r.Delete(tasksIdEndpointPattern, deleteTasksIdHandler)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
