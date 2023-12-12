@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -39,14 +41,92 @@ var tasks = map[string]Task{
 	},
 }
 
-// Ниже напишите обработчики для каждого эндпоинта
-// ...
+const (
+	contentTypeHeader      string = "Content-Type"
+	jsonMIME               string = "application/json"
+	tasksEndpointPattern   string = "/tasks"
+	tasksIdEndpointPattern string = "/tasks/{id}"
+)
+
+func getTasksHandler(w http.ResponseWriter, r *http.Request) {
+
+	resp, err := json.Marshal(tasks)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, jsonMIME)
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := w.Write(resp); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func postTasksHandler(w http.ResponseWriter, r *http.Request) {
+	var newTask Task
+	var buf bytes.Buffer
+
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := json.Unmarshal(buf.Bytes(), &newTask); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tasks[newTask.ID] = newTask
+
+	w.Header().Set(contentTypeHeader, jsonMIME)
+	w.WriteHeader(http.StatusCreated)
+
+}
+
+func getTasksIdHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	task, ok := tasks[id]
+	if !ok {
+		http.Error(w, "Задача не найдена", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := json.Marshal(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, jsonMIME)
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(resp); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func deleteTasksIdHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if _, ok := tasks[id]; !ok {
+		http.Error(w, "Задача не найдена", http.StatusBadRequest)
+	}
+	delete(tasks, id)
+
+	w.Header().Set(contentTypeHeader, jsonMIME)
+	w.WriteHeader(http.StatusOK)
+
+}
 
 func main() {
 	r := chi.NewRouter()
 
-	// здесь регистрируйте ваши обработчики
-	// ...
+	r.Get(tasksEndpointPattern, getTasksHandler)
+	r.Post(tasksEndpointPattern, postTasksHandler)
+	r.Get(tasksIdEndpointPattern, getTasksIdHandler)
+	r.Delete(tasksIdEndpointPattern, deleteTasksIdHandler)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
