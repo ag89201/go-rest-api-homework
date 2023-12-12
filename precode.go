@@ -59,7 +59,9 @@ func getTasksHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(contentTypeHeader, jsonMIME)
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(resp)
+	if _, err := w.Write(resp); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func postTasksHandler(w http.ResponseWriter, r *http.Request) {
